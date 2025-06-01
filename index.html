@@ -2,33 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Flashcard Generator</title>
+  <title>Manual Flashcard Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito&display=swap" rel="stylesheet" />
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Nunito', sans-serif;
+      background: #f0f9ff;
       padding: 20px;
-      max-width: 800px;
+      text-align: center;
+      max-width: 900px;
       margin: auto;
+    }
+    h1 {
+      color: #0288d1;
     }
     textarea {
       width: 100%;
-      height: 60px;
+      height: 120px;
       font-size: 16px;
-      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 15px;
     }
     button {
-      padding: 10px 20px;
+      padding: 10px 25px;
       font-size: 16px;
-    }
-    #errorMessage {
-      color: red;
-      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      background-color: #0288d1;
+      color: white;
+      cursor: pointer;
+      margin-bottom: 20px;
     }
     #flashcardsContainer {
       display: flex;
       flex-wrap: wrap;
-      margin-top: 20px;
-      gap: 10px;
+      gap: 15px;
+      justify-content: center;
     }
     .flashcard {
       width: 200px;
@@ -54,126 +65,72 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      font-size: 18px;
       border: 1px solid #ccc;
-      border-radius: 8px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       padding: 10px;
       box-sizing: border-box;
-      background: #fff;
+    }
+    .flashcard-front {
+      background-color: #ffffff;
     }
     .flashcard-back {
+      background-color: #4dd0e1;
+      color: white;
       transform: rotateY(180deg);
-      background-color: #f0f0f0;
-    }
-    .term, .definition {
-      font-size: 18px;
-      text-align: center;
     }
   </style>
 </head>
 <body>
-  <h1>Flashcard Generator</h1>
-  <textarea id="topicInput" placeholder="Enter a topic..."></textarea>
-  <button id="generateButton">Generate Flashcards</button>
-  <div id="errorMessage"></div>
+  <h1>📝 Flashcard Generator</h1>
+  <p>Enter one flashcard per line in the format: <strong>Term: Definition</strong></p>
+  <textarea id="flashcardInput" placeholder="Example:\nSun: A star at the center of our solar system\nMoon: Earth's natural satellite"></textarea>
+  <br />
+  <button onclick="generateFlashcards()">Generate Flashcards</button>
+
   <div id="flashcardsContainer"></div>
 
-  <!-- Include Google GenAI SDK -->
-  <script type="module">
-    import { GoogleGenAI } from 'https://esm.run/@google/genai';
+  <script>
+    function generateFlashcards() {
+      const input = document.getElementById('flashcardInput').value.trim();
+      const container = document.getElementById('flashcardsContainer');
+      container.innerHTML = '';
 
-    const topicInput = document.getElementById('topicInput');
-    const generateButton = document.getElementById('generateButton');
-    const flashcardsContainer = document.getElementById('flashcardsContainer');
-    const errorMessage = document.getElementById('errorMessage');
+      const lines = input.split('\n');
 
-    const ai = new GoogleGenAI({
-      apiKey: 'YOUR_API_KEY_HERE' // Replace this with your actual API key
-    });
+      lines.forEach((line) => {
+        const parts = line.split(':');
+        if (parts.length >= 2) {
+          const term = parts[0].trim();
+          const definition = parts.slice(1).join(':').trim();
 
-    generateButton.addEventListener('click', async () => {
-      const topic = topicInput.value.trim();
-      if (!topic) {
-        errorMessage.textContent = 'Please enter a topic or some terms and definitions.';
-        flashcardsContainer.textContent = '';
-        return;
-      }
+          const cardDiv = document.createElement('div');
+          cardDiv.className = 'flashcard';
 
-      errorMessage.textContent = 'Generating flashcards...';
-      flashcardsContainer.textContent = '';
-      generateButton.disabled = true;
+          const innerDiv = document.createElement('div');
+          innerDiv.className = 'flashcard-inner';
 
-      try {
-        const prompt = `Generate a list of flashcards for the topic of "${topic}". Each flashcard should have a term and a concise definition. Format the output as a list of "Term: Definition" pairs, with each pair on a new line. Here's an example:
-        Hello: Hola
-        Goodbye: Adiós`;
+          const front = document.createElement('div');
+          front.className = 'flashcard-front';
+          front.textContent = term;
 
-        const result = await ai.models.generateContent({
-          model: 'gemini-2.0-flash-exp',
-          contents: prompt,
-        });
+          const back = document.createElement('div');
+          back.className = 'flashcard-back';
+          back.textContent = definition;
 
-        const responseText = result?.text ?? '';
-        if (responseText) {
-          const flashcards = responseText
-            .split('\n')
-            .map((line) => {
-              const parts = line.split(':');
-              if (parts.length >= 2 && parts[0].trim()) {
-                const term = parts[0].trim();
-                const definition = parts.slice(1).join(':').trim();
-                if (definition) return { term, definition };
-              }
-              return null;
-            })
-            .filter((card) => card !== null);
+          innerDiv.appendChild(front);
+          innerDiv.appendChild(back);
+          cardDiv.appendChild(innerDiv);
 
-          if (flashcards.length > 0) {
-            errorMessage.textContent = '';
-            flashcards.forEach((flashcard, index) => {
-              const cardDiv = document.createElement('div');
-              cardDiv.classList.add('flashcard');
-              cardDiv.dataset.index = index;
+          cardDiv.addEventListener('click', () => {
+            cardDiv.classList.toggle('flipped');
+          });
 
-              const cardInner = document.createElement('div');
-              cardInner.classList.add('flashcard-inner');
-
-              const cardFront = document.createElement('div');
-              cardFront.classList.add('flashcard-front');
-              const termDiv = document.createElement('div');
-              termDiv.classList.add('term');
-              termDiv.textContent = flashcard.term;
-              cardFront.appendChild(termDiv);
-
-              const cardBack = document.createElement('div');
-              cardBack.classList.add('flashcard-back');
-              const definitionDiv = document.createElement('div');
-              definitionDiv.classList.add('definition');
-              definitionDiv.textContent = flashcard.definition;
-              cardBack.appendChild(definitionDiv);
-
-              cardInner.appendChild(cardFront);
-              cardInner.appendChild(cardBack);
-              cardDiv.appendChild(cardInner);
-
-              cardDiv.addEventListener('click', () => {
-                cardDiv.classList.toggle('flipped');
-              });
-
-              flashcardsContainer.appendChild(cardDiv);
-            });
-          } else {
-            errorMessage.textContent = 'No valid flashcards could be generated. Try a different topic.';
-          }
-        } else {
-          errorMessage.textContent = 'Failed to generate flashcards. Try again.';
+          container.appendChild(cardDiv);
         }
-      } catch (error) {
-        console.error('Error generating content:', error);
-        errorMessage.textContent = 'An error occurred while generating flashcards.';
-      } finally {
-        generateButton.disabled = false;
-      }
-    });
+      });
+    }
   </script>
 </body>
 </html>
